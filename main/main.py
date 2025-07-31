@@ -41,12 +41,22 @@ async def cmd_str(message: Message, state: FSMContext):
 @dp.message(Register.name)
 async def process_name(message: Message, state: FSMContext):
     name = message.text.strip()
-    conn =sqlite3.connect('users.db')
+    await state.update_data(name=name)
+    await message.answer('Теперь введите ваш email:')
+    await state.set_state(Register.email)
+
+
+@dp.message(Register.email)
+async def process_email(message: Message, state: FSMContext):
     email = message.text.strip()
+    data = await state.get_data()
+    name = data['name']
+
+    conn =sqlite3.connect('users.db')
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM user WHERE name = ?", (name, email ))
-    user = cur.fetchall()
+    cur.execute("SELECT * FROM users WHERE email = ?", (email, ))
+    user = cur.fetchone()
 
     if user:
         await message.answer('Вы уже зарегистрировались!')
