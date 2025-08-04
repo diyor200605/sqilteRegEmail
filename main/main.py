@@ -18,6 +18,7 @@ dp = Dispatcher(storage=MemoryStorage())
 class Register(StatesGroup):
     name = State()
     email = State()
+    phone = State()
 
 def init_db():
     conn = sqlite3.connect('users.db')
@@ -42,29 +43,36 @@ async def cmd_str(message: Message, state: FSMContext):
 async def process_name(message: Message, state: FSMContext):
     name = message.text.strip()
     await state.update_data(name=name)
-    await message.answer('Теперь введите ваш email:')
+    await message.answer('Введите ваш email:')
     await state.set_state(Register.email)
-
 
 @dp.message(Register.email)
 async def process_email(message: Message, state: FSMContext):
     email = message.text.strip()
+    await state.update_data(email=email)
+    await message.answer('Теперь введите свой номер телефона')
+    await state.set_state(Register.phone)
+
+
+@dp.message(Register.phone)
+async def process_phone(message: Message, state: FSMContext):
+    phone = message.text.strip()
     data = await state.get_data()
     name = data['name']
 
     conn =sqlite3.connect('users.db')
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM users WHERE email = ?", (email, ))
+    cur.execute("SELECT * FROM users WHERE phone = ?", (phone, ))
     user = cur.fetchone()
 
     if user:
         await message.answer('Вы уже зарегистрировались!')
     else:
-        cur.execute("INSERT INTO users (telegram_id, name, email) VALUES (?, ?, ?)",
-                    (message.from_user.id, name, email))
+        cur.execute("INSERT INTO users (telegram_id, name, email, phone) VALUES (?, ?, ?, ?)",
+                    (message.from_user.id, name, email, phone))
         conn.commit()
-        await message.answer(f'Спасибо за регистрацию, {name} {email}!')
+        await message.answer(f'Спасибо за регистрацию, {name} {email} {phone}!')
     conn.close()
     await state.clear()
 
